@@ -4,17 +4,62 @@ use warnings;
 use strict;
 use Carp;
 
-use version; $VERSION = qv('0.0.3');
+use version; our $VERSION = qv('0.0.3');
 
 # Other recommended modules (uncomment to use):
 #  use IO::Prompt;
 #  use Perl6::Export;
 #  use Perl6::Slurp;
 #  use Perl6::Say;
-
+use YAML qw(LoadFile);
+use IO::YAML;
+use DateTime;
 
 # Module implementation here
+sub new {
+  my $class = shift;
+  my $conf_param = shift;
+  my $conf;
+  if ( $conf_param =~ /.yaml/i ) {
+    my $conf = LoadFile($conf_param) || die "Can't open $conf_param: $@\n";
+  } elsif ( ref $conf_param ) {
+    $conf = $conf_param;
+  }
+  my $name = $conf->{'id'}."-".DateTime->now().".yaml";
+  my $io = IO::YAML->new($name, ">");
+  my $self = { _io => $io,
+	       _name => $name,
+	       _conf => $conf };
+  bless $self, $class;
+  return $self;
+	       
+}
 
+sub add_timestamp {
+  my $self = shift;
+  my $io = $self->{'_io'};
+  $io->print( DateTime->now() );
+}
+
+sub log {
+  my $self = shift;
+  my $to_log = shift || die "Need to log something\n";
+  my $with_timestamp = shift; # with it if true
+  my $io = $self->{'_io'};
+  if ( $with_timestamp ) {
+    $to_log = [DateTime->now(), $to_log ];
+  }
+  $io->print( $to_log );
+}
+
+sub name {
+  my $self = shift;
+  return $self->{'_name'};
+}
+sub close {
+  my $self = shift;
+   $self->{'_io'}->close || carp "Can't close $!\n";
+}
 
 1; # Magic true value required at end of module
 __END__
